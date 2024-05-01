@@ -104,6 +104,14 @@ public class Library {
         return null;
     }
 
+    public LibraryNovel getNovelByPath(String saveLocation) {
+        for(LibraryNovel currNovel: starredNovels) {
+            if (currNovel.saveLocation.equals(saveLocation)) return currNovel;
+        }
+
+        return null;
+    }
+
     public boolean isStarred(String novelUrl) {
         for(LibraryNovel currNovel: starredNovels) {
             if (currNovel.getNovelUrl().equals(novelUrl)) return true;
@@ -115,7 +123,7 @@ public class Library {
         starredNovels.removeIf(currNovel -> currNovel.getNovelUrl().equals(novelUrl));
     }
 
-    public void addNovel(Novel novel) {
+    public LibraryNovel addNovel(Novel novel) {
         LibraryNovel libNovel = toLibraryNovel(novel);
         starredNovels.add(libNovel);
         // Try to move file to library folder if previously downloaded
@@ -127,6 +135,8 @@ public class Library {
                 GrabberUtils.err("[LIBRARY]Could not move novel file. " + e.getMessage(), e);
             }
         }
+
+        return libNovel;
     }
 
     public LibraryNovel toLibraryNovel(Novel novel) {
@@ -176,85 +186,11 @@ public class Library {
         if(init.gui != null) {
             init.gui.libraryIsChecking(true);
         }
+
         for(LibraryNovel libNovel: getNovels()) {
-            // Skip novel if checking is disabled for it
-            if (!libNovel.isCheckingActive()) continue;
-
-            GrabberUtils.info("Checking "+ libNovel.getMetadata().getTitle());
-
-            // Make novel builder generic to handle libNovel in future
-            Novel novel;
-            try {
-                novel = Novel.builder()
-                        .novelLink(libNovel.getNovelUrl())
-                        .saveLocation(libNovel.getSaveLocation())
-                        .setSource(libNovel.getNovelUrl())
-                        .useAccount(libNovel.isUseAccount())
-                        .getImages(libNovel.isGetImages())
-                        .displayChapterTitle(libNovel.isDisplayChapterTitle())
-                        .waitTime(libNovel.getWaitTime())
-                        .window("checker")
-                        .build();
-            } catch (ClassNotFoundException e) {
-                GrabberUtils.err(e.getMessage());
-                continue;
-            } catch (IOException e) {
-                GrabberUtils.err(e.getMessage(), e);
-                continue;
-            }
-            // Get chapter list
-            novel.check();
-            if(novel.chapterList.isEmpty()) continue;
-
-            novel.metadata.setTitle(libNovel.metadata.getTitle());
-
-            int newestChapterNumber = novel.chapterList.size();
-            String newestChapterName = novel.chapterList.get(newestChapterNumber-1).name;
-            libNovel.setNewestChapterNumber(newestChapterNumber);
-            libNovel.setNewestChapterName(newestChapterName);
-
-            // Difference between last local chapter and newest released online
-            int chapterDifference = libNovel.getNewestChapterNumber() - libNovel.getLastLocalChapterNumber();
-            // Download new chapters if releases are past set threshold
-            if(chapterDifference >= libNovel.getThreshold() && libNovel.isAutoDownloadEnabled()) {
-                novel = Novel.modifier(novel)
-                        .firstChapter(libNovel.getLastLocalChapterNumber() + 1)
-                        .lastChapter(novel.chapterList.size())
-                        .build();
-                try {
-                    novel.downloadChapters();
-                    novel.output();
-                } catch (InterruptedException e) {
-                    GrabberUtils.err(e.getMessage(), e);
-                }
-
-                // Send EPUB as email attachment
-                if(libNovel.isSendAttachmentEnabled() && emailClient != null) {
-                    emailClient.sendAttachment(novel);
-                }
-                // Update last local chapter number to newest
-                if(libNovel.isUpdateLast()) {
-                    libNovel.setLastChapterNumber(newestChapterNumber);
-                    libNovel.setLastChapterName(newestChapterName);
-                }
-            }
-
-            // Send notifications
-            if(chapterDifference > 0 && libNovel.notificationsEnabled()) {
-                if(libNovel.isSendEmailNotification() && emailClient != null) {
-                    emailClient.sendNotification(novel);
-                }
-                if(libNovel.isSendDesktopNotification()) {
-                    DesktopNotification.sendChapterReleaseNotification(novel);
-                }
-                // Update last local chapter number to newest
-                if(libNovel.isUpdateLast()) {
-                    libNovel.setLastChapterNumber(newestChapterNumber);
-                    libNovel.setLastChapterName(newestChapterName);
-                }
-            }
-
+            updateNovel(libNovel);
         }
+
         // Update library gui
         if(init.gui != null) {
             init.gui.buildLibrary();
@@ -265,10 +201,6 @@ public class Library {
     }
 
     public void updateNovel(LibraryNovel libNovel) {
-        if(init.gui != null) {
-            init.gui.libraryIsChecking(true);
-        }
-
         // Skip novel if checking is disabled for it
         if (!libNovel.isCheckingActive()) return;
 
@@ -308,8 +240,7 @@ public class Library {
         // Difference between last local chapter and newest released online
         int chapterDifference = libNovel.getNewestChapterNumber() - libNovel.getLastLocalChapterNumber();
         // Download new chapters if releases are past set threshold
-        if(chapterDifference >= libNovel.getThreshold()) {
-//            if(chapterDifference >= libNovel.getThreshold() && libNovel.isAutoDownloadEnabled()) {
+        if(chapterDifference >= libNovel.getThreshold() && libNovel.isAutoDownloadEnabled()) {
             novel = Novel.modifier(novel)
                     .firstChapter(libNovel.getLastLocalChapterNumber() + 1)
                     .lastChapter(novel.chapterList.size())
@@ -346,14 +277,6 @@ public class Library {
                 libNovel.setLastChapterName(newestChapterName);
             }
         }
-
-        // Update library gui
-        if(init.gui != null) {
-            init.gui.buildLibrary();
-            init.gui.libraryIsChecking(false);
-        }
-        // Write changes to file
-        writeLibraryFile();
     }
 
     /**

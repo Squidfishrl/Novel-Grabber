@@ -62,7 +62,8 @@ public class CLI {
         }
 
         if (!params.containsKey("ignoreLibrary")) {
-            library.addNovel(novel);
+            LibraryNovel libNovel = library.addNovel(novel);
+            libNovel.setAutoDownloadEnabled(true);
             library.writeLibraryFile();
         }
 
@@ -70,14 +71,31 @@ public class CLI {
     }
 
     public static Novel updateNovel(Map<String, List<String>> params) throws IOException, ClassNotFoundException {
-        LibraryNovel novel = library.getNovel(params.get("link").get(0));
-        GrabberUtils.info(params.get("link").get(0));
-        // TODO: same with file location. Also option to move novel location
+
+        // update all novels in library
+        if (!params.containsKey("link") && !params.containsKey("path")) {
+            for (LibraryNovel libNovel : library.getNovels()) {
+                library.updateNovel(libNovel);
+            }
+
+            library.writeLibraryFile();
+            return null;
+        }
+
+        LibraryNovel novel = null;
+        if(params.containsKey("link")) {
+            novel =  library.getNovel(params.get("link").get(0));
+        } else if (params.containsKey("path")) {
+            novel = library.getNovelByPath(params.get("path").get(0));
+        }
+
         if (novel == null) {
             GrabberUtils.err("Novel doesn't exist in library");
         }
 
         library.updateNovel(novel);
+        library.writeLibraryFile();
+
         return novel;
     }
 

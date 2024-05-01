@@ -65,21 +65,20 @@ public class init {
             }
         }
         else {
-            if(!params.get("link").get(0).isEmpty()) {
+            if (params.containsKey("update")) {
                 try {
-                    if(params.containsKey("update")) {
-                        CLI.updateNovel(params);
-                    } else {
-                        CLI.downloadNovel(params);
-                    }
-
-                } catch (ClassNotFoundException | InterruptedException e) {
-                    GrabberUtils.err(e.getMessage());
-                } catch (IOException e) {
+                    CLI.updateNovel(params);
+                } catch (IOException | ClassNotFoundException e) {
                     GrabberUtils.err(e.getMessage(), e);
                 }
+            } else if (!params.containsKey("link") || params.get("link").get(0).isEmpty()) {
+                GrabberUtils.err("Novel link is missing");
             } else {
-                GrabberUtils.err("No novel link.");
+                try {
+                    CLI.downloadNovel(params);
+                } catch(IOException | ClassNotFoundException | InterruptedException e) {
+                    GrabberUtils.err(e.getMessage(), e);
+                }
             }
         }
     }
@@ -140,7 +139,7 @@ public class init {
                 "  [-track]\t\t\t\t\tUpdate novel when new updates come out.\n" +
                 "  [-untrack]\t\t\t\t\tStop tracking novel.\n" +
                 "  [-ignoreLib]\t\t\t\t\tDon't record novel in a library.json file\n" +
-                "  [-removeFromLib]\t\t\t\t\tRemove a novel from library.json file\n" +
+                "  [-removeFromLib]\t\t\t\t\tRemove a novel from the library.json file\n" +
                 "  [-update]\t\t\t\t\tAdd newly released chapters to novel\n" +
                 "  \n" +
                 "Examples:\n" +
