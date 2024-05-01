@@ -55,6 +55,12 @@ public class EPUB {
         }
     }
 
+    public EPUB(Novel novel, String path) throws IOException {
+        this.novel = novel;
+        this.novelMetadata = novel.metadata;
+        createHTMLHead();
+        this.book = tryReadOldFile(path);
+    }
     private void createHTMLHead() {
         StringBuilder builder = new StringBuilder();
         builder.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
@@ -119,6 +125,12 @@ public class EPUB {
      */
     public Book tryReadOldFile() throws IOException {
         File epubFile = new File(novel.saveLocation + "/" + setFilename() + ".epub");
+        InputStream inputStream = new FileInputStream(epubFile);
+        return new EpubReader().readEpub(inputStream, "UTF-8");
+    }
+
+    public Book tryReadOldFile(String fileName) throws IOException {
+        File epubFile = new File(fileName);
         InputStream inputStream = new FileInputStream(epubFile);
         return new EpubReader().readEpub(inputStream, "UTF-8");
     }

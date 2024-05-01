@@ -67,7 +67,12 @@ public class init {
         else {
             if(!params.get("link").get(0).isEmpty()) {
                 try {
-                    CLI.downloadNovel(params);
+                    if(params.containsKey("update")) {
+                        CLI.updateNovel(params);
+                    } else {
+                        CLI.downloadNovel(params);
+                    }
+
                 } catch (ClassNotFoundException | InterruptedException e) {
                     GrabberUtils.err(e.getMessage());
                 } catch (IOException e) {
@@ -132,6 +137,11 @@ public class init {
                 "  [-invertOrder]\t\t\t\tInvert the chapter order.\n" +
                 "  [-noDesc]\t\t\t\t\tDon't create a description page.\n" +
                 "  [-getImages]\t\t\t\t\tGrab images from chapter.\n" +
+                "  [-track]\t\t\t\t\tUpdate novel when new updates come out.\n" +
+                "  [-untrack]\t\t\t\t\tStop tracking novel.\n" +
+                "  [-ignoreLib]\t\t\t\t\tDon't record novel in a library.json file\n" +
+                "  [-removeFromLib]\t\t\t\t\tRemove a novel from library.json file\n" +
+                "  [-update]\t\t\t\t\tAdd newly released chapters to novel\n" +
                 "  \n" +
                 "Examples:\n" +
                 "java -jar Novel-Grabber.jar -link https://myhost.com/novel/a-novel\n" +

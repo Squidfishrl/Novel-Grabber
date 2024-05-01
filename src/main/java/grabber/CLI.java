@@ -1,5 +1,9 @@
 package grabber;
 
+import grabber.formats.EPUB;
+import library.Library;
+import library.LibraryNovel;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,14 +12,22 @@ import java.util.Map;
 
 public class CLI {
 
+    public static final Library library = Library.getInstance();
+
     /**
      * Downloads a novel fully automatic based on CLI input.
      */
     public static Novel downloadNovel(Map<String, List<String>> params) throws ClassNotFoundException, IOException, InterruptedException {
+
         Novel novel = new NovelBuilder().fromCLI(params).build();
+
+        if (!params.containsKey("ignoreLibrary") && library.getNovel(novel.novelLink) != null) {
+            GrabberUtils.err("Novel is already downloaded in " + library.getNovel(novel.novelLink).saveLocation);
+            return null;
+        }
+
         novel.check();
         NovelMetadata metadata = novel.metadata;
-
 
         // Chapter range needs to be set after fetching the chapter list
         if(params.containsKey("chapters")) {
@@ -48,10 +60,28 @@ public class CLI {
         if(novel.window.equals("checker")) {
             metadata.setTitle(oldBookTitle);
         }
+
+        if (!params.containsKey("ignoreLibrary")) {
+            library.addNovel(novel);
+            library.writeLibraryFile();
+        }
+
         return novel;
     }
 
-    public static Map<String, List<String>> createParamsFromArgs(String[] args) {
+    public static Novel updateNovel(Map<String, List<String>> params) throws IOException, ClassNotFoundException {
+        LibraryNovel novel = library.getNovel(params.get("link").get(0));
+        GrabberUtils.info(params.get("link").get(0));
+        // TODO: same with file location. Also option to move novel location
+        if (novel == null) {
+            GrabberUtils.err("Novel doesn't exist in library");
+        }
+
+        library.updateNovel(novel);
+        return novel;
+    }
+
+        public static Map<String, List<String>> createParamsFromArgs(String[] args) {
         final Map<String, List<String>> params = new HashMap<>();
         List<String> options = null;
         for (final String a : args) {
